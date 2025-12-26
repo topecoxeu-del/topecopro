@@ -2424,16 +2424,34 @@
                   <h3 className="font-semibold mb-3">Link für Kunden</h3>
                   <p className="text-sm text-slate-600 mb-2">Dieser Link zeigt nur dieses Hotel:</p>
                   <div className="p-3 bg-slate-100 rounded-xl text-xs font-mono break-all select-all">
-                    https://topecopro.netlify.app?hotel={hotel.id}
+                    {window.location.origin + window.location.pathname}?hotel={hotel.id}
                   </div>
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(window.location.origin + window.location.pathname + '?hotel=' + hotel.id);
+                      alert('Link kopiert!');
+                    }}
+                    className="mt-2 w-full py-2 bg-slate-200 text-slate-700 rounded-xl text-sm font-medium"
+                  >
+                    📋 Kopieren
+                  </button>
                 </div>
 
                 <div className="bg-white rounded-2xl p-5 shadow-sm">
                   <h3 className="font-semibold mb-3">Link für Personal</h3>
                   <p className="text-sm text-slate-600 mb-2">Für Housekeeping und Hausdame:</p>
                   <div className="p-3 bg-sky-50 rounded-xl text-xs font-mono break-all select-all">
-                    https://topecopro.netlify.app
+                    {window.location.origin + window.location.pathname}?hotel={hotel.id}
                   </div>
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(window.location.origin + window.location.pathname + '?hotel=' + hotel.id);
+                      alert('Link kopiert!');
+                    }}
+                    className="mt-2 w-full py-2 bg-sky-100 text-sky-700 rounded-xl text-sm font-medium"
+                  >
+                    📋 Kopieren
+                  </button>
                   <p className="text-xs text-slate-500 mt-2">Hotel: {hotel.name}</p>
                   
                   <div className="mt-4 space-y-2">
