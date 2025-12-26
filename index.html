@@ -2648,25 +2648,36 @@
                   
                   <div className="bg-white p-4 rounded-xl inline-block border-4 border-purple-200 mb-4">
                     <img 
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.origin + '?hotel=' + hotel.id + '&reklamation=1')}`}
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.origin + window.location.pathname + '?hotel=' + hotel.id + '&reklamation=1')}`}
                       alt="QR Code"
                       className="w-48 h-48"
                     />
                   </div>
                   
                   <div className="bg-slate-100 p-3 rounded-xl text-xs text-slate-600 break-all mb-4">
-                    {window.location.origin}?hotel={hotel.id}&reklamation=1
+                    {window.location.origin + window.location.pathname}?hotel={hotel.id}&reklamation=1
                   </div>
                   
                   <button 
                     onClick={() => {
-                      const url = window.location.origin + '?hotel=' + hotel.id + '&reklamation=1';
+                      const url = window.location.origin + window.location.pathname + '?hotel=' + hotel.id + '&reklamation=1';
                       navigator.clipboard.writeText(url);
                       alert('Link kopiert!');
                     }}
-                    className="w-full py-3 bg-purple-600 text-white rounded-xl font-medium"
+                    className="w-full py-3 bg-purple-600 text-white rounded-xl font-medium mb-3"
                   >
-                    📋 Link kopieren
+                    📋 Link kopieren (Reklamation)
+                  </button>
+                  
+                  <button 
+                    onClick={() => {
+                      const url = window.location.origin + window.location.pathname + '?hotel=' + hotel.id;
+                      navigator.clipboard.writeText(url);
+                      alert('Link kopiert!');
+                    }}
+                    className="w-full py-3 bg-sky-600 text-white rounded-xl font-medium"
+                  >
+                    📋 Link kopieren (Personal)
                   </button>
                 </div>
                 
