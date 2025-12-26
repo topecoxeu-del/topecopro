@@ -897,8 +897,13 @@
                 <button onClick={() => setAdminView('stats')} className={`flex-1 py-2 rounded-xl text-sm font-medium ${adminView === 'stats' ? 'bg-white text-purple-700' : 'bg-white/20'}`}>
                   Statistik
                 </button>
-                <button onClick={() => setAdminView('reklamationen')} className={`flex-1 py-2 rounded-xl text-sm font-medium ${adminView === 'reklamationen' ? 'bg-white text-purple-700' : 'bg-white/20'}`}>
+                <button onClick={() => setAdminView('reklamationen')} className={`flex-1 py-2 rounded-xl text-sm font-medium relative ${adminView === 'reklamationen' ? 'bg-white text-purple-700' : 'bg-white/20'}`}>
                   📋 Rekl.
+                  {reklamationen.filter(r => r.status === 'neu').length > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">
+                      {reklamationen.filter(r => r.status === 'neu').length}
+                    </span>
+                  )}
                 </button>
                 <button onClick={() => setAdminView('aufgaben')} className={`flex-1 py-2 rounded-xl text-sm font-medium ${adminView === 'aufgaben' ? 'bg-white text-purple-700' : 'bg-white/20'}`}>
                   📝 Aufg.
@@ -1258,6 +1263,68 @@
                   </div>
                 </div>
               )}
+
+              {/* Reklamationen for Admin - RED ALERT */}
+              {isAdmin && reklamationen.filter(r => r.status === 'neu').length > 0 && (
+                <div className="bg-orange-500 p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-white font-bold text-sm">📢 Neue Reklamationen!</span>
+                    <span className="bg-white text-orange-600 text-xs px-2 py-0.5 rounded-full font-bold">
+                      {reklamationen.filter(r => r.status === 'neu').length}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {reklamationen.filter(r => r.status === 'neu').slice(0, 3).map(r => (
+                      <button 
+                        key={r.id} 
+                        onClick={() => setAdminView('reklamationen')}
+                        className="w-full bg-white rounded-xl p-3 flex items-center gap-3 text-left"
+                      >
+                        <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 font-bold flex-shrink-0">
+                          {r.room || '!'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm text-slate-800 truncate">{r.category}</p>
+                          <p className="text-xs text-slate-500 truncate">{r.description}</p>
+                        </div>
+                        <Icons.ChevronRight className="w-5 h-5 text-orange-400 flex-shrink-0" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Probleme from rooms/areas - YELLOW ALERT */}
+              {(() => {
+                const allProblems = [
+                  ...roomsArr.flatMap(r => (r.problems || []).map(p => ({ ...p, room: r.number, type: 'room' }))),
+                  ...areasArr.flatMap(a => (a.problems || []).map(p => ({ ...p, area: a.name, type: 'area' })))
+                ];
+                if (allProblems.length === 0) return null;
+                return (
+                  <div className="bg-amber-500 p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-white font-bold text-sm">⚠️ Gemeldete Probleme!</span>
+                      <span className="bg-white text-amber-600 text-xs px-2 py-0.5 rounded-full font-bold">
+                        {allProblems.length}
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {allProblems.slice(0, 3).map((p, i) => (
+                        <div key={i} className="bg-white rounded-xl p-3 flex items-center gap-3">
+                          <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 font-bold flex-shrink-0">
+                            {p.room || p.area?.charAt(0) || '!'}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm text-slate-800">{p.room ? `Zimmer ${p.room}` : p.area}</p>
+                            <p className="text-xs text-slate-500 truncate">{p.description || problemTypes.find(t => t.id === p.type)?.label}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Tabs: Rooms / Areas - hide rooms tab if bereicheOnly */}
               {!selectedHotel.bereicheOnly ? (
