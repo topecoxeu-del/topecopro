@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Delete Hotel</title>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #1e293b; color: white; }
+    button { padding: 15px 30px; margin: 10px; font-size: 16px; cursor: pointer; border: none; border-radius: 10px; }
+    .delete { background: #ef4444; color: white; }
+    .hotel { background: #334155; padding: 20px; margin: 10px 0; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; }
+    h1 { color: #38bdf8; }
+  </style>
+</head>
+<body>
+  <h1>🗑️ Hotel/Objekt löschen</h1>
+  <div id="list"></div>
+  
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDZPO1-fwKJ8Y_SOUnyJwR4dSATxxWCzoA",
+      authDomain: "top-eco-app.firebaseapp.com",
+      databaseURL: "https://top-eco-app-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "top-eco-app"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    
+    db.ref('hotels').on('value', snap => {
+      const hotels = snap.val() || {};
+      const list = document.getElementById('list');
+      list.innerHTML = '';
+      
+      Object.values(hotels).forEach(h => {
+        const div = document.createElement('div');
+        div.className = 'hotel';
+        div.innerHTML = `
+          <div>
+            <strong>${h.name}</strong><br>
+            <small>${h.bereicheOnly ? 'Objekt (nur Bereiche)' : 'Hotel'}</small>
+          </div>
+          <button class="delete" onclick="deleteHotel('${h.id}', '${h.name}')">🗑️ Löschen</button>
+        `;
+        list.appendChild(div);
+      });
+      
+      if (Object.keys(hotels).length === 0) {
+        list.innerHTML = '<p>Keine Hotels/Objekte vorhanden</p>';
+      }
+    });
+    
+    function deleteHotel(id, name) {
+      if (confirm('Wirklich "' + name + '" löschen?')) {
+        db.ref('hotels/' + id).remove();
+        db.ref('hotelRooms/' + id).remove();
+        db.ref('hotelAreas/' + id).remove();
+        db.ref('archive/' + id).remove();
+        alert('Gelöscht!');
+      }
+    }
+  </script>
+</body>
+</html>

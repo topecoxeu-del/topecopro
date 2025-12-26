@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FORCE DELETE</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+</head>
+<body style="background:#1e1e1e;color:white;font-family:monospace;padding:20px;">
+  <h1 style="color:red;">🔥 FORCE DELETE - SVE 🔥</h1>
+  <div id="status" style="background:#333;padding:20px;margin:20px 0;border-radius:10px;"></div>
+  <button onclick="forceDelete()" style="background:red;color:white;padding:20px 40px;font-size:20px;border:none;border-radius:10px;cursor:pointer;">
+    💣 OBRIŠI KOMPLETNU BAZU
+  </button>
+  
+  <script>
+    firebase.initializeApp({
+      apiKey: "AIzaSyB7in8wb3v3lzo9ShD1elJAUTVLW3G3ALM",
+      authDomain: "top-eco-app.firebaseapp.com",
+      databaseURL: "https://top-eco-app-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "top-eco-app"
+    });
+    
+    const db = firebase.database();
+    const status = document.getElementById('status');
+    
+    function log(msg) {
+      status.innerHTML += msg + '<br>';
+      console.log(msg);
+    }
+    
+    // Prikaži šta je u bazi
+    db.ref('/').once('value').then(snap => {
+      const data = snap.val();
+      log('📊 U BAZI:');
+      if (data) {
+        Object.keys(data).forEach(key => {
+          log('  - ' + key + ': ' + JSON.stringify(data[key]).substring(0, 100) + '...');
+        });
+      } else {
+        log('  (prazno)');
+      }
+    });
+    
+    async function forceDelete() {
+      if (!confirm('OBRISATI SVE?')) return;
+      
+      log('');
+      log('🔥 BRIŠEM SVE...');
+      
+      try {
+        // Briši root
+        await db.ref('/').remove();
+        log('✅ ROOT OBRISAN!');
+        
+        // Proveri
+        const snap = await db.ref('/').once('value');
+        if (snap.val() === null) {
+          log('✅ BAZA JE PRAZNA!');
+          log('');
+          log('👉 IDI NA: https://topecopro.netlify.app');
+          log('👉 LOGIN SA: 9999');
+        } else {
+          log('⚠️ Još ima podataka: ' + JSON.stringify(snap.val()));
+        }
+      } catch (err) {
+        log('❌ GREŠKA: ' + err.message);
+        log('');
+        log('Možda Firebase pravila blokiraju brisanje.');
+      }
+    }
+  </script>
+</body>
+</html>

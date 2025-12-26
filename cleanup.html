@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TopEcoPro - Database Cleanup</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1e293b; color: white; min-height: 100vh; padding: 20px; }
+    .container { max-width: 600px; margin: 0 auto; }
+    h1 { text-align: center; margin-bottom: 10px; color: #f43f5e; }
+    p.subtitle { text-align: center; color: #94a3b8; margin-bottom: 30px; }
+    .card { background: #334155; border-radius: 16px; padding: 20px; margin-bottom: 20px; }
+    h2 { font-size: 16px; margin-bottom: 15px; color: #fbbf24; }
+    .hotel-item { background: #475569; border-radius: 12px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .hotel-name { font-weight: bold; }
+    .hotel-id { font-size: 12px; color: #94a3b8; }
+    .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; }
+    .btn-danger { background: #ef4444; color: white; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-warning { background: #f59e0b; color: white; }
+    .btn-warning:hover { background: #d97706; }
+    .btn-success { background: #10b981; color: white; }
+    .btn-full { width: 100%; padding: 15px; font-size: 16px; margin-top: 10px; }
+    .status { padding: 15px; border-radius: 12px; margin-top: 20px; }
+    .status.success { background: #065f46; }
+    .status.error { background: #7f1d1d; }
+    .log { background: #1e293b; border-radius: 8px; padding: 10px; margin-top: 15px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; }
+    .log-entry { padding: 5px 0; border-bottom: 1px solid #334155; }
+    .log-entry.success { color: #34d399; }
+    .log-entry.error { color: #f87171; }
+    .log-entry.info { color: #60a5fa; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🗑️ Database Cleanup</h1>
+    <p class="subtitle">Briši stare podatke iz Firebase-a</p>
+
+    <div class="card">
+      <h2>🏨 Hotels u bazi</h2>
+      <div id="hotels-list">Učitavanje...</div>
+    </div>
+
+    <div class="card">
+      <h2>⚠️ Opasne opcije</h2>
+      <button class="btn btn-danger btn-full" onclick="deleteAllHotels()">
+        🗑️ Obriši SVE hotele
+      </button>
+      <button class="btn btn-warning btn-full" onclick="deleteAllRooms()">
+        🧹 Obriši sve sobe (hotelRooms)
+      </button>
+      <button class="btn btn-warning btn-full" onclick="deleteAllAreas()">
+        🧹 Obriši sve oblasti (hotelAreas)
+      </button>
+      <button class="btn btn-warning btn-full" onclick="deleteAllArchive()">
+        📦 Obriši svu arhivu
+      </button>
+      <button class="btn btn-danger btn-full" onclick="deleteEverything()">
+        💣 OBRIŠI APSOLUTNO SVE
+      </button>
+    </div>
+
+    <div class="card">
+      <h2>📋 Log</h2>
+      <div id="log" class="log"></div>
+    </div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyB7in8wb3v3lzo9ShD1elJAUTVLW3G3ALM",
+      authDomain: "top-eco-app.firebaseapp.com",
+      databaseURL: "https://top-eco-app-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "top-eco-app",
+      storageBucket: "top-eco-app.firebasestorage.app",
+      messagingSenderId: "305427388035",
+      appId: "1:305427388035:web:5e7f00e2f7d3ef81bcda1e"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function log(msg, type = 'info') {
+      const logDiv = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry ' + type;
+      entry.textContent = new Date().toLocaleTimeString() + ' - ' + msg;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function loadHotels() {
+      db.ref('hotels').on('value', snap => {
+        const data = snap.val();
+        const container = document.getElementById('hotels-list');
+        
+        if (!data) {
+          container.innerHTML = '<p style="color: #94a3b8;">Nema hotela u bazi</p>';
+          return;
+        }
+
+        container.innerHTML = '';
+        Object.values(data).forEach(hotel => {
+          const div = document.createElement('div');
+          div.className = 'hotel-item';
+          div.innerHTML = `
+            <div>
+              <div class="hotel-name">${hotel.name || 'Bez imena'}</div>
+              <div class="hotel-id">ID: ${hotel.id} | Floors: ${hotel.floors || '?'} | bereicheOnly: ${hotel.bereicheOnly || false}</div>
+            </div>
+            <button class="btn btn-danger" onclick="deleteHotel('${hotel.id}', '${hotel.name}')">🗑️</button>
+          `;
+          container.appendChild(div);
+        });
+
+        log('Učitano ' + Object.keys(data).length + ' hotela', 'success');
+      });
+    }
+
+    async function deleteHotel(id, name) {
+      if (!confirm(`Obrisati "${name}" i sve povezane podatke?`)) return;
+      
+      log(`Brišem hotel: ${name}...`, 'info');
+      
+      try {
+        await db.ref('hotels/' + id).remove();
+        log('✓ hotels/' + id, 'success');
+        
+        await db.ref('hotelRooms/' + id).remove();
+        log('✓ hotelRooms/' + id, 'success');
+        
+        await db.ref('hotelAreas/' + id).remove();
+        log('✓ hotelAreas/' + id, 'success');
+        
+        await db.ref('archive/' + id).remove();
+        log('✓ archive/' + id, 'success');
+        
+        await db.ref('workSessions/' + id).remove();
+        log('✓ workSessions/' + id, 'success');
+        
+        await db.ref('reklamationen/' + id).remove();
+        log('✓ reklamationen/' + id, 'success');
+        
+        await db.ref('aufgaben/' + id).remove();
+        log('✓ aufgaben/' + id, 'success');
+        
+        log(`Hotel "${name}" kompletno obrisan!`, 'success');
+      } catch (err) {
+        log('GREŠKA: ' + err.message, 'error');
+      }
+    }
+
+    async function deleteAllHotels() {
+      if (!confirm('OBRISATI SVE HOTELE?')) return;
+      if (!confirm('JESI SIGURAN? Ovo se ne može poništiti!')) return;
+      
+      log('Brišem sve hotele...', 'info');
+      
+      const snap = await db.ref('hotels').once('value');
+      const hotels = snap.val();
+      
+      if (!hotels) {
+        log('Nema hotela za brisanje', 'info');
+        return;
+      }
+
+      for (const id of Object.keys(hotels)) {
+        await deleteHotel(id, hotels[id].name || id);
+      }
+      
+      log('SVE OBRISANO!', 'success');
+    }
+
+    async function deleteAllRooms() {
+      if (!confirm('Obrisati SVE sobe?')) return;
+      await db.ref('hotelRooms').remove();
+      log('hotelRooms obrisano', 'success');
+    }
+
+    async function deleteAllAreas() {
+      if (!confirm('Obrisati SVE oblasti?')) return;
+      await db.ref('hotelAreas').remove();
+      log('hotelAreas obrisano', 'success');
+    }
+
+    async function deleteAllArchive() {
+      if (!confirm('Obrisati SVU arhivu?')) return;
+      await db.ref('archive').remove();
+      log('archive obrisano', 'success');
+    }
+
+    async function deleteEverything() {
+      if (!confirm('💣 OBRISATI APSOLUTNO SVE IZ BAZE?')) return;
+      if (!confirm('OVO JE POSLEDNJA ŠANSA! SVE ĆE BITI IZGUBLJENO!')) return;
+      if (prompt('Ukucaj "OBRISI SVE" za potvrdu:') !== 'OBRISI SVE') {
+        log('Otkazano', 'info');
+        return;
+      }
+      
+      log('Brišem SVE...', 'info');
+      
+      const paths = ['hotels', 'hotelRooms', 'hotelAreas', 'archive', 'workSessions', 'reklamationen', 'aufgaben'];
+      
+      for (const path of paths) {
+        try {
+          await db.ref(path).remove();
+          log('✓ ' + path, 'success');
+        } catch (err) {
+          log('✗ ' + path + ': ' + err.message, 'error');
+        }
+      }
+      
+      log('💣 SVE OBRISANO!', 'success');
+    }
+
+    // Init
+    loadHotels();
+    log('Cleanup tool spreman', 'info');
+  </script>
+</body>
+</html>
