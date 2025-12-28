@@ -1,0 +1,1854 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>TopEcoPro - Housekeeping Management</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    * { -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    const { useState, useEffect, useCallback } = React;
+
+    // ============================================
+    // FIREBASE KONFIGURACIJA
+    // ============================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyDZPO1-fwKJ8Y_SOUnyJwR4dSATxxWCzoA",
+      authDomain: "ibis-housekeeping.firebaseapp.com",
+      databaseURL: "https://ibis-housekeeping-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "ibis-housekeeping",
+      storageBucket: "ibis-housekeeping.firebasestorage.app",
+      messagingSenderId: "623140279708",
+      appId: "1:623140279708:web:715252828ff4cdc0486459"
+    };
+
+    const isDemoMode = false;
+
+    let database = null;
+    if (!isDemoMode) {
+      firebase.initializeApp(firebaseConfig);
+      database = firebase.database();
+    }
+
+    // ============================================
+    // SUPER ADMIN PIN
+    // ============================================
+    const SUPER_ADMIN_PIN = '9999';
+
+    // ============================================
+    // IKONE
+    // ============================================
+    const Camera = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+        <circle cx="12" cy="13" r="3"/>
+      </svg>
+    );
+
+    const AlertTriangle = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+        <path d="M12 9v4"/><path d="M12 17h.01"/>
+      </svg>
+    );
+
+    const Wine = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M8 22h8"/><path d="M7 10h10"/><path d="M12 15v7"/>
+        <path d="M12 15a5 5 0 0 0 5-5c0-2-.5-4-2-8H9c-1.5 4-2 6-2 8a5 5 0 0 0 5 5Z"/>
+      </svg>
+    );
+
+    const Check = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+    );
+
+    const Clock = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+      </svg>
+    );
+
+    const SkipForward = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/>
+      </svg>
+    );
+
+    const ChevronRight = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="m9 18 6-6-6-6"/>
+      </svg>
+    );
+
+    const ChevronLeft = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="m15 18-6-6 6-6"/>
+      </svg>
+    );
+
+    const X = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+      </svg>
+    );
+
+    const Plus = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M5 12h14"/><path d="M12 5v14"/>
+      </svg>
+    );
+
+    const Minus = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M5 12h14"/>
+      </svg>
+    );
+
+    const ArrowLeft = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
+      </svg>
+    );
+
+    const Search = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+      </svg>
+    );
+
+    const Users = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+        <path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+    );
+
+    const LogOut = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>
+      </svg>
+    );
+
+    const BarChart = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <line x1="12" x2="12" y1="20" y2="10"/><line x1="18" x2="18" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="16"/>
+      </svg>
+    );
+
+    const Wifi = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M5 13a10 10 0 0 1 14 0"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><circle cx="12" cy="20" r="1"/>
+      </svg>
+    );
+
+    const WifiOff = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M2 2l20 20"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><circle cx="12" cy="20" r="1"/>
+      </svg>
+    );
+
+    const Eye = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+      </svg>
+    );
+
+    const Download = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>
+      </svg>
+    );
+
+    const Building = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/>
+      </svg>
+    );
+
+    const Trash = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+      </svg>
+    );
+
+    const Edit = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+      </svg>
+    );
+
+    const Settings = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6"/><path d="m1 12h6m6 0h6"/>
+      </svg>
+    );
+
+    // ============================================
+    // TOPECOX LOGO KOMPONENTA
+    // ============================================
+    function TopEcoLogo({ size = 'normal' }) {
+      const sizes = {
+        small: { container: 'w-10 h-10', text1: 'text-xs', text2: 'text-sm' },
+        normal: { container: 'w-20 h-16', text1: 'text-sm', text2: 'text-lg' },
+        large: { container: 'w-32 h-24', text1: 'text-lg', text2: 'text-2xl' }
+      };
+      const s = sizes[size] || sizes.normal;
+      
+      return (
+        <div className={`${s.container} bg-white rounded-xl flex items-center justify-center shadow-lg`}>
+          <div className="text-center px-2">
+            <div className={`${s.text1} font-bold text-emerald-600 leading-tight`}>TOP ECO</div>
+            <div className={`${s.text2} font-black text-slate-800 leading-tight`}>PRO</div>
+          </div>
+        </div>
+      );
+    }
+
+    // ============================================
+    // PROBLEM TYPES
+    // ============================================
+    const problemTypes = [
+      { id: 'damage', label: 'Beschädigung', icon: '🔧' },
+      { id: 'missing', label: 'Fehlt', icon: '❓' },
+      { id: 'stain', label: 'Fleck', icon: '💧' },
+      { id: 'broken', label: 'Defekt', icon: '⚠️' },
+      { id: 'dirty', label: 'Schmutzig', icon: '🧹' },
+      { id: 'other', label: 'Sonstiges', icon: '📝' }
+    ];
+
+    // ============================================
+    // HELPER FUNKCIJE
+    // ============================================
+    const generateRoomsForHotel = (floors) => {
+      const rooms = {};
+      floors.forEach(floor => {
+        floor.rooms.forEach(roomNumber => {
+          rooms[roomNumber] = {
+            id: roomNumber,
+            number: roomNumber.toString(),
+            floor: floor.number,
+            status: 'pending',
+            guestStatus: 'none',
+            anreise: false,
+            inspected: false,
+            inspectedBy: null,
+            inspectedAt: null,
+            problems: [],
+            minibar: {
+              water: { consumed: 0, price: 2 },
+              cola: { consumed: 0, price: 3 },
+              beer: { consumed: 0, price: 5 },
+              wine: { consumed: 0, price: 15 },
+              snacks: { consumed: 0, price: 4 },
+              juice: { consumed: 0, price: 3 }
+            },
+            photos: [],
+            cleanedBy: null,
+            completedAt: null
+          };
+        });
+      });
+      return rooms;
+    };
+
+    // ============================================
+    // GLAVNA APLIKACIJA
+    // ============================================
+    function App() {
+      const [appState, setAppState] = useState('loading'); // loading, select_hotel, super_admin, hotel_login, hotel_app
+      const [hotels, setHotels] = useState({});
+      const [selectedHotel, setSelectedHotel] = useState(null);
+      const [currentUser, setCurrentUser] = useState(null);
+      const [isOnline, setIsOnline] = useState(true);
+
+      // Firebase sync za hotele
+      useEffect(() => {
+        if (isDemoMode) {
+          const savedHotels = localStorage.getItem('topecopro_hotels');
+          if (savedHotels) {
+            setHotels(JSON.parse(savedHotels));
+          }
+          setAppState('select_hotel');
+          return;
+        }
+
+        const hotelsRef = database.ref('hotels');
+        
+        hotelsRef.on('value', (snapshot) => {
+          const data = snapshot.val();
+          setHotels(data || {});
+          setIsOnline(true);
+          setAppState('select_hotel');
+        }, (error) => {
+          setIsOnline(false);
+          setAppState('select_hotel');
+        });
+
+        const connectedRef = database.ref('.info/connected');
+        connectedRef.on('value', (snap) => {
+          setIsOnline(snap.val() === true);
+        });
+
+        return () => {
+          hotelsRef.off();
+          connectedRef.off();
+        };
+      }, []);
+
+      // Save to localStorage in demo mode
+      useEffect(() => {
+        if (isDemoMode && Object.keys(hotels).length > 0) {
+          localStorage.setItem('topecopro_hotels', JSON.stringify(hotels));
+        }
+      }, [hotels]);
+
+      const saveHotel = useCallback((hotelId, hotelData) => {
+        if (isDemoMode) {
+          setHotels(prev => ({ ...prev, [hotelId]: hotelData }));
+        } else {
+          database.ref(`hotels/${hotelId}`).set(hotelData);
+        }
+      }, []);
+
+      const deleteHotel = useCallback((hotelId) => {
+        if (isDemoMode) {
+          setHotels(prev => {
+            const newHotels = { ...prev };
+            delete newHotels[hotelId];
+            return newHotels;
+          });
+        } else {
+          database.ref(`hotels/${hotelId}`).remove();
+        }
+      }, []);
+
+      const updateHotelRooms = useCallback((hotelId, rooms) => {
+        if (isDemoMode) {
+          setHotels(prev => ({
+            ...prev,
+            [hotelId]: { ...prev[hotelId], rooms }
+          }));
+        } else {
+          database.ref(`hotels/${hotelId}/rooms`).set(rooms);
+        }
+      }, []);
+
+      if (appState === 'loading') {
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-emerald-600 to-teal-700 flex items-center justify-center">
+            <div className="text-center">
+              <TopEcoLogo size="large" />
+              <p className="text-white mt-4">Laden...</p>
+            </div>
+          </div>
+        );
+      }
+
+      if (appState === 'super_admin') {
+        return (
+          <SuperAdminDashboard 
+            hotels={hotels}
+            onSaveHotel={saveHotel}
+            onDeleteHotel={deleteHotel}
+            onBack={() => setAppState('select_hotel')}
+            isOnline={isOnline}
+          />
+        );
+      }
+
+      if (appState === 'hotel_app' && selectedHotel && currentUser) {
+        return (
+          <HotelApp 
+            hotel={hotels[selectedHotel]}
+            hotelId={selectedHotel}
+            currentUser={currentUser}
+            onUpdateRooms={(rooms) => updateHotelRooms(selectedHotel, rooms)}
+            onLogout={() => {
+              setCurrentUser(null);
+              setSelectedHotel(null);
+              setAppState('select_hotel');
+            }}
+            isOnline={isOnline}
+          />
+        );
+      }
+
+      if (appState === 'hotel_login' && selectedHotel) {
+        return (
+          <HotelLogin 
+            hotel={hotels[selectedHotel]}
+            onLogin={(user) => {
+              setCurrentUser(user);
+              setAppState('hotel_app');
+            }}
+            onBack={() => {
+              setSelectedHotel(null);
+              setAppState('select_hotel');
+            }}
+          />
+        );
+      }
+
+      // Select Hotel / Main Screen
+      return (
+        <HotelSelectScreen 
+          hotels={hotels}
+          onSelectHotel={(hotelId) => {
+            setSelectedHotel(hotelId);
+            setAppState('hotel_login');
+          }}
+          onOpenSuperAdmin={() => setAppState('super_admin')}
+          isOnline={isOnline}
+        />
+      );
+    }
+
+    // ============================================
+    // HOTEL SELECT SCREEN
+    // ============================================
+    function HotelSelectScreen({ hotels, onSelectHotel, onOpenSuperAdmin, isOnline }) {
+      const [showPinModal, setShowPinModal] = useState(false);
+      const [pin, setPin] = useState('');
+      const [pinError, setPinError] = useState('');
+
+      const handlePinInput = (digit) => {
+        if (pin.length < 4) {
+          const newPin = pin + digit;
+          setPin(newPin);
+          setPinError('');
+          
+          if (newPin.length === 4) {
+            if (newPin === SUPER_ADMIN_PIN) {
+              setShowPinModal(false);
+              setPin('');
+              onOpenSuperAdmin();
+            } else {
+              setPinError('Falscher PIN');
+              setTimeout(() => setPin(''), 500);
+            }
+          }
+        }
+      };
+
+      const hotelList = Object.entries(hotels);
+
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-emerald-600 to-teal-700 flex flex-col">
+          {/* Header */}
+          <div className="p-6 text-center">
+            <div className="flex justify-center mb-4">
+              <TopEcoLogo size="large" />
+            </div>
+            <h1 className="text-2xl font-bold text-white">Housekeeping Management</h1>
+            <p className="text-white/70 mt-1">Wählen Sie Ihr Hotel</p>
+            
+            <div className="flex items-center justify-center gap-2 mt-3">
+              <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-400' : 'bg-red-400'}`}></div>
+              <span className="text-white/60 text-sm">{isOnline ? 'Online' : 'Offline'}</span>
+            </div>
+          </div>
+
+          {/* Hotel List */}
+          <div className="flex-1 px-4 pb-4 overflow-auto">
+            <div className="max-w-md mx-auto space-y-3">
+              {hotelList.length === 0 ? (
+                <div className="bg-white/10 rounded-2xl p-8 text-center">
+                  <Building className="w-16 h-16 text-white/50 mx-auto mb-4" />
+                  <p className="text-white/70">Keine Hotels vorhanden</p>
+                  <p className="text-white/50 text-sm mt-2">Klicken Sie auf Admin um Hotels hinzuzufügen</p>
+                </div>
+              ) : (
+                hotelList.map(([hotelId, hotel]) => (
+                  <button
+                    key={hotelId}
+                    onClick={() => onSelectHotel(hotelId)}
+                    className="w-full bg-white/20 hover:bg-white/30 text-white p-4 rounded-2xl flex items-center gap-4 transition-all"
+                  >
+                    <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
+                      <Building className="w-8 h-8" />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="font-semibold text-lg">{hotel.name}</p>
+                      <p className="text-white/70 text-sm">
+                        {hotel.floors?.length || 0} Etagen • {Object.keys(hotel.rooms || {}).length} Zimmer
+                      </p>
+                    </div>
+                    <ChevronRight className="w-6 h-6 text-white/50" />
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Admin Button */}
+          <div className="p-4">
+            <button
+              onClick={() => setShowPinModal(true)}
+              className="w-full max-w-md mx-auto block bg-white/10 text-white/70 py-3 rounded-xl text-sm"
+            >
+              TopEcoX Admin
+            </button>
+          </div>
+
+          {/* PIN Modal */}
+          {showPinModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-3xl p-6 w-full max-w-sm">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-lg font-semibold">Admin PIN</h3>
+                  <button onClick={() => { setShowPinModal(false); setPin(''); setPinError(''); }}>
+                    <X className="w-6 h-6 text-slate-400" />
+                  </button>
+                </div>
+
+                <div className="flex gap-3 justify-center mb-4">
+                  {[0, 1, 2, 3].map(i => (
+                    <div key={i} className={`w-4 h-4 rounded-full ${i < pin.length ? 'bg-emerald-500' : 'bg-slate-200'} ${pinError ? 'bg-red-400' : ''}`} />
+                  ))}
+                </div>
+
+                {pinError && <p className="text-red-500 text-center text-sm mb-4">{pinError}</p>}
+
+                <div className="grid grid-cols-3 gap-3">
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, null, 0, 'del'].map((digit, i) => (
+                    <button
+                      key={i}
+                      onClick={() => digit === 'del' ? setPin(pin.slice(0, -1)) : digit !== null && handlePinInput(digit.toString())}
+                      disabled={digit === null}
+                      className={`h-14 rounded-xl font-bold text-xl ${
+                        digit === null ? 'invisible' : digit === 'del' ? 'bg-slate-100 text-slate-600' : 'bg-slate-100 text-slate-800 active:bg-slate-200'
+                      }`}
+                    >
+                      {digit === 'del' ? '←' : digit}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ============================================
+    // SUPER ADMIN DASHBOARD
+    // ============================================
+    function SuperAdminDashboard({ hotels, onSaveHotel, onDeleteHotel, onBack, isOnline }) {
+      const [view, setView] = useState('list'); // list, add, edit
+      const [editingHotel, setEditingHotel] = useState(null);
+      const [deleteConfirm, setDeleteConfirm] = useState(null);
+
+      const hotelList = Object.entries(hotels);
+
+      if (view === 'add' || view === 'edit') {
+        return (
+          <HotelForm 
+            hotel={editingHotel}
+            hotelId={editingHotel?.id}
+            onSave={(hotelId, hotelData) => {
+              onSaveHotel(hotelId, hotelData);
+              setView('list');
+              setEditingHotel(null);
+            }}
+            onCancel={() => {
+              setView('list');
+              setEditingHotel(null);
+            }}
+          />
+        );
+      }
+
+      return (
+        <div className="min-h-screen bg-slate-100">
+          {/* Header */}
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 text-white px-5 pt-12 pb-6">
+            <div className="flex items-center gap-4 mb-4">
+              <button onClick={onBack} className="p-2 bg-white/10 rounded-full">
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <TopEcoLogo size="small" />
+            </div>
+            <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+            <p className="text-white/70">Hotel Management</p>
+            
+            <div className="flex items-center gap-2 mt-3">
+              <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-400' : 'bg-red-400'}`}></div>
+              <span className="text-white/60 text-sm">{isOnline ? 'Online' : 'Offline'}</span>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="p-4 space-y-4">
+            {/* Add Hotel Button */}
+            <button
+              onClick={() => setView('add')}
+              className="w-full bg-emerald-500 text-white py-4 rounded-2xl font-semibold flex items-center justify-center gap-2"
+            >
+              <Plus className="w-6 h-6" /> Hotel hinzufügen
+            </button>
+
+            {/* Hotel List */}
+            {hotelList.length === 0 ? (
+              <div className="bg-white rounded-2xl p-8 text-center">
+                <Building className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                <p className="text-slate-500">Keine Hotels vorhanden</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {hotelList.map(([hotelId, hotel]) => (
+                  <div key={hotelId} className="bg-white rounded-2xl p-4 shadow-sm">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
+                        <Building className="w-6 h-6 text-emerald-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold">{hotel.name}</p>
+                        <p className="text-slate-500 text-sm">
+                          {hotel.floors?.length || 0} Etagen • {Object.keys(hotel.rooms || {}).length} Zimmer • {hotel.staff?.length || 0} Mitarbeiter
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setEditingHotel({ ...hotel, id: hotelId });
+                          setView('edit');
+                        }}
+                        className="p-2 bg-slate-100 rounded-lg"
+                      >
+                        <Edit className="w-5 h-5 text-slate-600" />
+                      </button>
+                      <button
+                        onClick={() => setDeleteConfirm(hotelId)}
+                        className="p-2 bg-red-100 rounded-lg"
+                      >
+                        <Trash className="w-5 h-5 text-red-600" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Delete Confirmation Modal */}
+          {deleteConfirm && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
+                <h3 className="text-lg font-semibold mb-2">Hotel löschen?</h3>
+                <p className="text-slate-500 mb-6">Diese Aktion kann nicht rückgängig gemacht werden.</p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setDeleteConfirm(null)}
+                    className="flex-1 py-3 bg-slate-100 rounded-xl font-medium"
+                  >
+                    Abbrechen
+                  </button>
+                  <button
+                    onClick={() => {
+                      onDeleteHotel(deleteConfirm);
+                      setDeleteConfirm(null);
+                    }}
+                    className="flex-1 py-3 bg-red-500 text-white rounded-xl font-medium"
+                  >
+                    Löschen
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ============================================
+    // HOTEL FORM (Add/Edit)
+    // ============================================
+    function HotelForm({ hotel, hotelId, onSave, onCancel }) {
+      const [name, setName] = useState(hotel?.name || '');
+      const [floors, setFloors] = useState(hotel?.floors || []);
+      const [staff, setStaff] = useState(hotel?.staff || []);
+      const [hausdamePin, setHausdamePin] = useState(hotel?.hausdamePin || '0000');
+      
+      const [newFloorNumber, setNewFloorNumber] = useState('');
+      const [newFloorRooms, setNewFloorRooms] = useState('');
+      
+      const addFloor = () => {
+        if (!newFloorNumber) return;
+        
+        let rooms = [];
+        if (newFloorRooms) {
+          // Parse room numbers: "101, 102, 103" or "101-110"
+          if (newFloorRooms.includes('-')) {
+            const [start, end] = newFloorRooms.split('-').map(n => parseInt(n.trim()));
+            for (let i = start; i <= end; i++) {
+              rooms.push(i);
+            }
+          } else {
+            rooms = newFloorRooms.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+          }
+        }
+        
+        setFloors([...floors, { number: parseInt(newFloorNumber), rooms }]);
+        setNewFloorNumber('');
+        setNewFloorRooms('');
+      };
+
+      const removeFloor = (index) => {
+        setFloors(floors.filter((_, i) => i !== index));
+      };
+
+      const addHousekeeping = () => {
+        const nextNum = staff.filter(s => s.role === 'housekeeper').length + 1;
+        setStaff([...staff, {
+          id: `hk_${Date.now()}`,
+          name: `Housekeeping ${nextNum}`,
+          pin: `${nextNum}${nextNum}${nextNum}${nextNum}`,
+          role: 'housekeeper',
+          floors: []
+        }]);
+      };
+
+      const updateStaffMember = (index, updates) => {
+        const newStaff = [...staff];
+        newStaff[index] = { ...newStaff[index], ...updates };
+        setStaff(newStaff);
+      };
+
+      const removeStaffMember = (index) => {
+        setStaff(staff.filter((_, i) => i !== index));
+      };
+
+      const handleSave = () => {
+        if (!name.trim()) return alert('Bitte Hotelnamen eingeben');
+        if (floors.length === 0) return alert('Bitte mindestens eine Etage hinzufügen');
+        
+        const id = hotelId || `hotel_${Date.now()}`;
+        const rooms = generateRoomsForHotel(floors);
+        
+        // Add Hausdame if not exists
+        let finalStaff = [...staff];
+        if (!finalStaff.find(s => s.role === 'admin')) {
+          finalStaff.unshift({
+            id: 'hausdame',
+            name: 'Hausdame',
+            pin: hausdamePin,
+            role: 'admin',
+            floors: floors.map(f => f.number)
+          });
+        } else {
+          // Update Hausdame PIN and floors
+          finalStaff = finalStaff.map(s => 
+            s.role === 'admin' 
+              ? { ...s, pin: hausdamePin, floors: floors.map(f => f.number) }
+              : s
+          );
+        }
+        
+        onSave(id, {
+          name: name.trim(),
+          floors,
+          staff: finalStaff,
+          hausdamePin,
+          rooms
+        });
+      };
+
+      return (
+        <div className="min-h-screen bg-slate-100">
+          {/* Header */}
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 text-white px-5 pt-12 pb-6">
+            <div className="flex items-center gap-4 mb-4">
+              <button onClick={onCancel} className="p-2 bg-white/10 rounded-full">
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <TopEcoLogo size="small" />
+            </div>
+            <h1 className="text-2xl font-bold">{hotel ? 'Hotel bearbeiten' : 'Neues Hotel'}</h1>
+          </div>
+
+          {/* Form */}
+          <div className="p-4 space-y-4">
+            {/* Hotel Name */}
+            <div className="bg-white rounded-2xl p-4">
+              <label className="block text-sm font-medium text-slate-600 mb-2">Hotelname</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="z.B. ibis Bregenz"
+                className="w-full p-3 bg-slate-100 rounded-xl"
+              />
+            </div>
+
+            {/* Floors */}
+            <div className="bg-white rounded-2xl p-4">
+              <label className="block text-sm font-medium text-slate-600 mb-3">Etagen & Zimmer</label>
+              
+              {floors.map((floor, index) => (
+                <div key={index} className="flex items-center gap-2 mb-2 p-2 bg-slate-50 rounded-lg">
+                  <span className="font-medium">{floor.number}. Stock:</span>
+                  <span className="flex-1 text-sm text-slate-500">
+                    {floor.rooms.length} Zimmer ({floor.rooms.slice(0, 3).join(', ')}{floor.rooms.length > 3 ? '...' : ''})
+                  </span>
+                  <button onClick={() => removeFloor(index)} className="p-1 text-red-500">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              ))}
+
+              <div className="flex gap-2 mt-3">
+                <input
+                  type="number"
+                  value={newFloorNumber}
+                  onChange={(e) => setNewFloorNumber(e.target.value)}
+                  placeholder="Stock"
+                  className="w-20 p-2 bg-slate-100 rounded-lg text-sm"
+                />
+                <input
+                  type="text"
+                  value={newFloorRooms}
+                  onChange={(e) => setNewFloorRooms(e.target.value)}
+                  placeholder="101-120 oder 101,102,103"
+                  className="flex-1 p-2 bg-slate-100 rounded-lg text-sm"
+                />
+                <button
+                  onClick={addFloor}
+                  className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            {/* Hausdame PIN */}
+            <div className="bg-white rounded-2xl p-4">
+              <label className="block text-sm font-medium text-slate-600 mb-2">Hausdame PIN</label>
+              <input
+                type="text"
+                value={hausdamePin}
+                onChange={(e) => setHausdamePin(e.target.value.slice(0, 4))}
+                placeholder="0000"
+                maxLength={4}
+                className="w-32 p-3 bg-slate-100 rounded-xl text-center font-mono text-lg"
+              />
+            </div>
+
+            {/* Staff */}
+            <div className="bg-white rounded-2xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-sm font-medium text-slate-600">Housekeeping Personal</label>
+                <button
+                  onClick={addHousekeeping}
+                  className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-sm font-medium"
+                >
+                  + Hinzufügen
+                </button>
+              </div>
+
+              {staff.filter(s => s.role === 'housekeeper').map((member, index) => {
+                const staffIndex = staff.findIndex(s => s.id === member.id);
+                return (
+                  <div key={member.id} className="flex items-center gap-2 mb-2 p-2 bg-slate-50 rounded-lg">
+                    <input
+                      type="text"
+                      value={member.name}
+                      onChange={(e) => updateStaffMember(staffIndex, { name: e.target.value })}
+                      className="flex-1 p-2 bg-white rounded-lg text-sm"
+                    />
+                    <input
+                      type="text"
+                      value={member.pin}
+                      onChange={(e) => updateStaffMember(staffIndex, { pin: e.target.value.slice(0, 4) })}
+                      placeholder="PIN"
+                      maxLength={4}
+                      className="w-20 p-2 bg-white rounded-lg text-sm text-center font-mono"
+                    />
+                    <select
+                      value={member.floors?.join(',') || ''}
+                      onChange={(e) => updateStaffMember(staffIndex, { 
+                        floors: e.target.value ? e.target.value.split(',').map(Number) : [] 
+                      })}
+                      className="w-24 p-2 bg-white rounded-lg text-sm"
+                    >
+                      <option value="">Alle</option>
+                      {floors.map(f => (
+                        <option key={f.number} value={f.number}>{f.number}. Stock</option>
+                      ))}
+                    </select>
+                    <button onClick={() => removeStaffMember(staffIndex)} className="p-1 text-red-500">
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Save Button */}
+            <button
+              onClick={handleSave}
+              className="w-full bg-emerald-500 text-white py-4 rounded-2xl font-semibold"
+            >
+              {hotel ? 'Speichern' : 'Hotel erstellen'}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // ============================================
+    // HOTEL LOGIN
+    // ============================================
+    function HotelLogin({ hotel, onLogin, onBack }) {
+      const [selectedStaff, setSelectedStaff] = useState(null);
+      const [pin, setPin] = useState('');
+      const [error, setError] = useState('');
+
+      const handlePinInput = (digit) => {
+        if (pin.length < 4) {
+          const newPin = pin + digit;
+          setPin(newPin);
+          setError('');
+          
+          if (newPin.length === 4) {
+            const user = hotel.staff.find(s => s.id === selectedStaff && s.pin === newPin);
+            if (user) {
+              onLogin(user);
+            } else {
+              setError('Falscher PIN');
+              setTimeout(() => setPin(''), 500);
+            }
+          }
+        }
+      };
+
+      if (!selectedStaff) {
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-sky-600 to-purple-700 flex flex-col">
+            <div className="p-4">
+              <button onClick={onBack} className="text-white/80 flex items-center gap-2">
+                <ArrowLeft className="w-5 h-5" /> Zurück
+              </button>
+            </div>
+
+            <div className="flex-1 flex flex-col items-center justify-center p-8">
+              <TopEcoLogo size="normal" />
+              <h1 className="text-2xl font-bold text-white mt-6 mb-2">{hotel.name}</h1>
+              <p className="text-white/70 mb-8">Wählen Sie Ihren Namen</p>
+
+              <div className="w-full max-w-sm space-y-3">
+                {hotel.staff?.map(s => (
+                  <button
+                    key={s.id}
+                    onClick={() => setSelectedStaff(s.id)}
+                    className="w-full bg-white/20 text-white p-4 rounded-2xl flex items-center gap-4"
+                  >
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold ${
+                      s.role === 'admin' ? 'bg-purple-500' : 'bg-sky-500'
+                    }`}>
+                      {s.name[0]}
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="font-semibold">{s.name}</p>
+                      <p className="text-sm text-white/70">
+                        {s.role === 'admin' ? 'Administrator' : `${s.floors?.length ? s.floors.join('. + ') + '. Stock' : 'Alle Etagen'}`}
+                      </p>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-white/50" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      const selectedUser = hotel.staff.find(s => s.id === selectedStaff);
+
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-sky-600 to-purple-700 flex flex-col">
+          <div className="p-4">
+            <button onClick={() => { setSelectedStaff(null); setPin(''); setError(''); }} className="text-white/80 flex items-center gap-2">
+              <ArrowLeft className="w-5 h-5" /> Zurück
+            </button>
+          </div>
+
+          <div className="flex-1 flex flex-col items-center justify-center p-8">
+            <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 text-white text-3xl font-bold ${
+              selectedUser.role === 'admin' ? 'bg-purple-500' : 'bg-sky-500'
+            }`}>
+              {selectedUser.name[0]}
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-1">{selectedUser.name}</h2>
+            <p className="text-white/70 mb-8">PIN eingeben</p>
+
+            <div className="flex gap-3 mb-6">
+              {[0, 1, 2, 3].map(i => (
+                <div key={i} className={`w-4 h-4 rounded-full ${i < pin.length ? 'bg-white' : 'bg-white/30'} ${error ? 'bg-red-400' : ''}`} />
+              ))}
+            </div>
+
+            {error && <p className="text-red-300 text-sm mb-4">{error}</p>}
+
+            <div className="grid grid-cols-3 gap-4 w-full max-w-xs">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, null, 0, 'del'].map((digit, i) => (
+                <button
+                  key={i}
+                  onClick={() => digit === 'del' ? setPin(pin.slice(0, -1)) : digit !== null && handlePinInput(digit.toString())}
+                  disabled={digit === null}
+                  className={`h-16 rounded-2xl font-bold text-2xl ${
+                    digit === null ? 'invisible' : digit === 'del' ? 'bg-white/10 text-white' : 'bg-white/20 text-white active:bg-white/30'
+                  }`}
+                >
+                  {digit === 'del' ? '←' : digit}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ============================================
+    // HOTEL APP (Main Functionality)
+    // ============================================
+    function HotelApp({ hotel, hotelId, currentUser, onUpdateRooms, onLogout, isOnline }) {
+      const [rooms, setRooms] = useState(hotel.rooms || {});
+      const [selectedRoom, setSelectedRoom] = useState(null);
+      const [activeTab, setActiveTab] = useState('status');
+      const [filterFloor, setFilterFloor] = useState(0);
+      const [filterStatus, setFilterStatus] = useState('all');
+      const [filterGuestStatus, setFilterGuestStatus] = useState('all');
+      const [searchQuery, setSearchQuery] = useState('');
+      const [adminView, setAdminView] = useState('rooms');
+
+      useEffect(() => {
+        setRooms(hotel.rooms || {});
+      }, [hotel.rooms]);
+
+      const today = new Date().toLocaleDateString('de-DE', { 
+        weekday: 'long', 
+        day: 'numeric', 
+        month: 'long',
+        year: 'numeric'
+      });
+
+      const updateRoom = useCallback((roomId, updates) => {
+        const updatedRooms = { ...rooms, [roomId]: { ...rooms[roomId], ...updates } };
+        setRooms(updatedRooms);
+        onUpdateRooms(updatedRooms);
+
+        if (selectedRoom?.id === roomId) {
+          setSelectedRoom({ ...rooms[roomId], ...updates });
+        }
+      }, [rooms, selectedRoom, onUpdateRooms]);
+
+      const setStatus = useCallback((roomId, status) => {
+        const updates = { status };
+        if (status === 'clean') {
+          updates.completedAt = new Date().toISOString();
+          updates.cleanedBy = currentUser?.id;
+        }
+        if (status === 'in_progress') {
+          updates.cleanedBy = currentUser?.id;
+        }
+        if (status !== 'clean') {
+          updates.inspected = false;
+          updates.inspectedBy = null;
+          updates.inspectedAt = null;
+        }
+        updateRoom(roomId, updates);
+      }, [currentUser, updateRoom]);
+
+      const setGuestStatus = useCallback((roomId, guestStatus) => {
+        const anreise = guestStatus === 'abreise' ? true : false;
+        updateRoom(roomId, { guestStatus, anreise });
+      }, [updateRoom]);
+
+      const setAnreise = useCallback((roomId, anreise) => {
+        updateRoom(roomId, { anreise });
+      }, [updateRoom]);
+
+      const setInspected = useCallback((roomId, inspected) => {
+        const updates = { 
+          inspected,
+          inspectedBy: inspected ? currentUser?.id : null,
+          inspectedAt: inspected ? new Date().toISOString() : null
+        };
+        updateRoom(roomId, updates);
+      }, [currentUser, updateRoom]);
+
+      const addProblem = useCallback((roomId, problemType, description) => {
+        const room = rooms[roomId];
+        const newProblem = {
+          id: Date.now(),
+          type: problemType,
+          description,
+          reportedBy: currentUser?.id,
+          reportedAt: new Date().toISOString()
+        };
+        updateRoom(roomId, { problems: [...(room.problems || []), newProblem] });
+      }, [rooms, currentUser, updateRoom]);
+
+      const updateMinibar = useCallback((roomId, item, delta) => {
+        const room = rooms[roomId];
+        const newMinibar = { ...room.minibar };
+        newMinibar[item] = {
+          ...newMinibar[item],
+          consumed: Math.max(0, newMinibar[item].consumed + delta)
+        };
+        updateRoom(roomId, { minibar: newMinibar });
+      }, [rooms, updateRoom]);
+
+      const addPhoto = useCallback((roomId, imageData) => {
+        const room = rooms[roomId];
+        const newPhoto = {
+          id: Date.now(),
+          url: imageData,
+          takenBy: currentUser?.id,
+          takenAt: new Date().toISOString()
+        };
+        updateRoom(roomId, { photos: [...(room.photos || []), newPhoto] });
+      }, [rooms, currentUser, updateRoom]);
+
+      const resetDay = useCallback(() => {
+        if (confirm('Alle Zimmer zurücksetzen?')) {
+          const resetRooms = generateRoomsForHotel(hotel.floors);
+          setRooms(resetRooms);
+          onUpdateRooms(resetRooms);
+        }
+      }, [hotel.floors, onUpdateRooms]);
+
+      const generatePDF = useCallback(() => {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        const dateStr = new Date().toLocaleDateString('de-DE', {
+          weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+        });
+        const timeStr = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+
+        doc.setFontSize(20);
+        doc.setFont(undefined, 'bold');
+        doc.text(`${hotel.name} - Tagesbericht`, 105, 20, { align: 'center' });
+        
+        doc.setFontSize(12);
+        doc.setFont(undefined, 'normal');
+        doc.text(`Datum: ${dateStr}`, 105, 30, { align: 'center' });
+        doc.text(`Erstellt um: ${timeStr}`, 105, 37, { align: 'center' });
+        
+        doc.line(20, 42, 190, 42);
+
+        const roomsArr = Object.values(rooms);
+        const stats = {
+          total: roomsArr.length,
+          inspected: roomsArr.filter(r => r.inspected).length,
+          clean: roomsArr.filter(r => r.status === 'clean' && !r.inspected).length,
+          pending: roomsArr.filter(r => r.status === 'pending').length
+        };
+
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.text('Zusammenfassung', 20, 52);
+        
+        doc.setFontSize(11);
+        doc.setFont(undefined, 'normal');
+        doc.text(`Gesamt: ${stats.total} | Kontrolliert: ${stats.inspected} | Sauber: ${stats.clean} | Ausstehend: ${stats.pending}`, 20, 62);
+
+        const fileName = `${hotel.name}_Tagesbericht_${new Date().toISOString().split('T')[0]}.pdf`;
+        doc.save(fileName);
+      }, [rooms, hotel.name]);
+
+      const getStatusColor = (room) => {
+        if (room.inspected) return 'bg-emerald-600';
+        switch(room.status) {
+          case 'clean': return 'bg-amber-400';
+          case 'in_progress': return 'bg-orange-400';
+          case 'skipped': return 'bg-slate-400';
+          default: return 'bg-slate-200';
+        }
+      };
+
+      const getStatusBgColor = (room) => {
+        if (room.inspected) return 'bg-emerald-50 border-emerald-400';
+        switch(room.status) {
+          case 'clean': return 'bg-amber-50 border-amber-300';
+          case 'in_progress': return 'bg-orange-50 border-orange-200';
+          default: return 'bg-white border-slate-100';
+        }
+      };
+
+      const getStatusLabel = (room) => {
+        if (room.inspected) return 'Kontrolliert ✓✓';
+        switch(room.status) {
+          case 'clean': return 'Sauber ✓';
+          case 'in_progress': return 'In Bearbeitung';
+          case 'skipped': return 'Übersprungen';
+          default: return 'Ausstehend';
+        }
+      };
+
+      const getGuestStatusLabel = (gs) => {
+        switch(gs) {
+          case 'abreise': return 'Abreise';
+          case 'bleibe': return 'Bleibe';
+          case 'bb': return 'BB';
+          case 'kontrolle': return 'Kontrolle';
+          default: return '';
+        }
+      };
+
+      const getGuestStatusColor = (gs) => {
+        switch(gs) {
+          case 'abreise': return 'bg-red-100 text-red-700';
+          case 'bleibe': return 'bg-blue-100 text-blue-700';
+          case 'bb': return 'bg-purple-100 text-purple-700';
+          case 'kontrolle': return 'bg-orange-100 text-orange-700';
+          default: return '';
+        }
+      };
+
+      const getStaffName = (staffId) => {
+        return hotel.staff?.find(s => s.id === staffId)?.name || '';
+      };
+
+      const roomsArray = Object.values(rooms);
+      const isAdmin = currentUser.role === 'admin';
+      
+      const availableFloors = isAdmin 
+        ? hotel.floors?.map(f => f.number) || []
+        : currentUser.floors?.length ? currentUser.floors : hotel.floors?.map(f => f.number) || [];
+
+      const filteredRooms = roomsArray.filter(room => {
+        if (!isAdmin && currentUser.floors?.length && !currentUser.floors.includes(room.floor)) return false;
+        if (filterFloor > 0 && room.floor !== filterFloor) return false;
+        if (filterStatus !== 'all') {
+          if (filterStatus === 'inspected' && !room.inspected) return false;
+          if (filterStatus !== 'inspected' && room.status !== filterStatus) return false;
+        }
+        if (filterGuestStatus !== 'all' && room.guestStatus !== filterGuestStatus) return false;
+        if (searchQuery && !room.number.includes(searchQuery)) return false;
+        return true;
+      }).sort((a, b) => a.id - b.id);
+
+      const stats = {
+        total: roomsArray.length,
+        clean: roomsArray.filter(r => r.status === 'clean' && !r.inspected).length,
+        inspected: roomsArray.filter(r => r.inspected).length,
+        inProgress: roomsArray.filter(r => r.status === 'in_progress').length,
+        pending: roomsArray.filter(r => r.status === 'pending').length,
+        abreise: roomsArray.filter(r => r.guestStatus === 'abreise').length,
+        bleibe: roomsArray.filter(r => r.guestStatus === 'bleibe').length,
+        bb: roomsArray.filter(r => r.guestStatus === 'bb').length,
+        kontrolle: roomsArray.filter(r => r.guestStatus === 'kontrolle').length
+      };
+
+      // Room Detail View
+      if (selectedRoom) {
+        return (
+          <RoomDetail 
+            room={rooms[selectedRoom.id] || selectedRoom}
+            hotel={hotel}
+            currentUser={currentUser}
+            onBack={() => setSelectedRoom(null)}
+            onSetStatus={setStatus}
+            onSetGuestStatus={setGuestStatus}
+            onSetAnreise={setAnreise}
+            onSetInspected={setInspected}
+            onAddProblem={addProblem}
+            onUpdateMinibar={updateMinibar}
+            onAddPhoto={addPhoto}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            getStatusColor={getStatusColor}
+            getStatusLabel={getStatusLabel}
+            getGuestStatusLabel={getGuestStatusLabel}
+            getGuestStatusColor={getGuestStatusColor}
+            getStaffName={getStaffName}
+          />
+        );
+      }
+
+      return (
+        <div className="min-h-screen bg-slate-50">
+          {/* Header */}
+          <div className={`${isAdmin ? 'bg-gradient-to-br from-purple-600 to-purple-700' : 'bg-gradient-to-br from-sky-600 to-sky-700'} text-white px-5 pt-12 pb-6`}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <TopEcoLogo size="small" />
+                <div>
+                  <h1 className="text-lg font-bold">{hotel.name}</h1>
+                  <p className="text-white/70 text-xs">{currentUser.name}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className={`p-2 rounded-full ${isOnline ? 'bg-white/20' : 'bg-red-500/50'}`}>
+                  {isOnline ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}
+                </div>
+                <button onClick={onLogout} className="p-2 bg-white/20 rounded-full">
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            
+            <p className="text-white/60 text-xs mb-3">{today}</p>
+
+            {/* Stats */}
+            <div className="grid grid-cols-4 gap-2">
+              <div className="bg-white/20 rounded-xl px-2 py-2 text-center">
+                <div className="text-xl font-bold">{stats.inspected}</div>
+                <div className="text-xs text-white/70">Kontrolliert</div>
+              </div>
+              <div className="bg-white/20 rounded-xl px-2 py-2 text-center">
+                <div className="text-xl font-bold">{stats.clean}</div>
+                <div className="text-xs text-white/70">Sauber</div>
+              </div>
+              <div className="bg-white/20 rounded-xl px-2 py-2 text-center">
+                <div className="text-xl font-bold">{stats.inProgress}</div>
+                <div className="text-xs text-white/70">In Arbeit</div>
+              </div>
+              <div className="bg-white/20 rounded-xl px-2 py-2 text-center">
+                <div className="text-xl font-bold">{stats.pending}</div>
+                <div className="text-xs text-white/70">Übrig</div>
+              </div>
+            </div>
+
+            {/* Admin Tabs */}
+            {isAdmin && (
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={() => setAdminView('rooms')}
+                  className={`flex-1 py-2 rounded-xl text-sm font-medium ${adminView === 'rooms' ? 'bg-white text-purple-700' : 'bg-white/20'}`}
+                >
+                  Zimmer
+                </button>
+                <button
+                  onClick={() => setAdminView('stats')}
+                  className={`flex-1 py-2 rounded-xl text-sm font-medium ${adminView === 'stats' ? 'bg-white text-purple-700' : 'bg-white/20'}`}
+                >
+                  Statistik
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Admin Stats View */}
+          {isAdmin && adminView === 'stats' && (
+            <div className="p-4 space-y-4">
+              <div className="bg-white rounded-2xl p-5 shadow-sm">
+                <h3 className="font-semibold mb-4">Fortschritt</h3>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="flex-1 bg-slate-100 rounded-full h-4 overflow-hidden">
+                    <div className="bg-emerald-600 h-full" style={{ width: `${(stats.inspected / stats.total) * 100}%` }} />
+                  </div>
+                  <span className="font-medium">{Math.round((stats.inspected / stats.total) * 100)}%</span>
+                </div>
+                <p className="text-slate-500 text-sm">{stats.inspected} von {stats.total} kontrolliert</p>
+              </div>
+
+              <button onClick={generatePDF} className="w-full bg-blue-600 text-white py-3 rounded-xl font-medium flex items-center justify-center gap-2">
+                <Download className="w-5 h-5" /> PDF Tagesbericht
+              </button>
+
+              <button onClick={resetDay} className="w-full bg-rose-500 text-white py-3 rounded-xl font-medium">
+                Neuer Tag — Reset
+              </button>
+            </div>
+          )}
+
+          {/* Room List */}
+          {(currentUser.role === 'housekeeper' || adminView === 'rooms') && (
+            <>
+              {/* Search */}
+              <div className="px-4 py-3 bg-white border-b border-slate-100 sticky top-0 z-10">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Zimmer suchen..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-100 rounded-xl text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Floor Filter */}
+              <div className="flex gap-2 px-4 py-2 overflow-x-auto bg-white border-b border-slate-100">
+                <button
+                  onClick={() => setFilterFloor(0)}
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap ${filterFloor === 0 ? 'bg-sky-600 text-white' : 'bg-slate-100'}`}
+                >
+                  Alle
+                </button>
+                {availableFloors.map(floor => (
+                  <button
+                    key={floor}
+                    onClick={() => setFilterFloor(floor)}
+                    className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap ${filterFloor === floor ? 'bg-sky-600 text-white' : 'bg-slate-100'}`}
+                  >
+                    {floor}. Stock
+                  </button>
+                ))}
+              </div>
+
+              {/* Status Filter */}
+              <div className="flex gap-2 px-4 py-2 overflow-x-auto">
+                {[
+                  { key: 'all', label: 'Alle' },
+                  { key: 'pending', label: 'Ausstehend' },
+                  { key: 'clean', label: 'Sauber' },
+                  { key: 'inspected', label: '✓✓ Kontrolliert' }
+                ].map(filter => (
+                  <button
+                    key={filter.key}
+                    onClick={() => setFilterStatus(filter.key)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap ${
+                      filterStatus === filter.key 
+                        ? filter.key === 'inspected' ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-white'
+                        : 'bg-white text-slate-600 border border-slate-200'
+                    }`}
+                  >
+                    {filter.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Room Cards */}
+              <div className="px-4 pb-24 space-y-2 pt-2">
+                {filteredRooms.map(room => (
+                  <div key={room.id} className={`w-full rounded-2xl p-3 shadow-sm border ${getStatusBgColor(room)}`}>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setSelectedRoom(room)}
+                        className={`w-12 h-12 rounded-xl ${getStatusColor(room)} flex items-center justify-center flex-shrink-0`}
+                      >
+                        <span className="text-white font-bold">{room.number}</span>
+                      </button>
+                      
+                      {isAdmin ? (
+                        <div className="flex-1">
+                          <div className="flex gap-1 mb-1">
+                            {[
+                              { key: 'abreise', label: 'AB', color: 'bg-red-500 text-white', activeColor: 'ring-2 ring-red-600' },
+                              { key: 'bleibe', label: 'BL', color: 'bg-blue-500 text-white', activeColor: 'ring-2 ring-blue-600' },
+                              { key: 'bb', label: 'BB', color: 'bg-purple-500 text-white', activeColor: 'ring-2 ring-purple-600' },
+                              { key: 'kontrolle', label: 'K', color: 'bg-orange-500 text-white', activeColor: 'ring-2 ring-orange-600' }
+                            ].map(btn => (
+                              <button
+                                key={btn.key}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setGuestStatus(room.id, room.guestStatus === btn.key ? 'none' : btn.key);
+                                }}
+                                className={`w-9 h-9 rounded-lg text-xs font-bold ${
+                                  room.guestStatus === btn.key ? `${btn.color} ${btn.activeColor}` : 'bg-slate-200 text-slate-500'
+                                }`}
+                              >
+                                {btn.label}
+                              </button>
+                            ))}
+                            {room.guestStatus === 'abreise' ? (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setAnreise(room.id, !room.anreise);
+                                }}
+                                className={room.anreise ? "w-9 h-9 rounded-lg text-xs font-bold bg-green-500 text-white" : "w-9 h-9 rounded-lg text-xs font-bold bg-white text-gray-400 border-2 border-dashed border-gray-300"}
+                              >
+                                AN
+                              </button>
+                            ) : null}
+                            {room.status === 'clean' && !room.inspected && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setInspected(room.id, true);
+                                }}
+                                className="w-9 h-9 rounded-lg text-xs font-bold bg-emerald-600 text-white ml-1"
+                              >
+                                ✓✓
+                              </button>
+                            )}
+                          </div>
+                          <span className={`text-xs ${room.inspected ? 'text-emerald-700 font-medium' : 'text-slate-500'}`}>
+                            {getStatusLabel(room)}
+                          </span>
+                        </div>
+                      ) : (
+                        <button onClick={() => setSelectedRoom(room)} className="flex-1 text-left">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold">Zimmer {room.number}</span>
+                            {room.guestStatus !== 'none' && (
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getGuestStatusColor(room.guestStatus)}`}>
+                                {getGuestStatusLabel(room.guestStatus)}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-sm text-slate-500">{getStatusLabel(room)}</span>
+                        </button>
+                      )}
+                      
+                      <button onClick={() => setSelectedRoom(room)} className="p-1">
+                        <ChevronRight className="w-5 h-5 text-slate-300" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      );
+    }
+
+    // ============================================
+    // ROOM DETAIL
+    // ============================================
+    function RoomDetail({ 
+      room, hotel, currentUser, onBack, onSetStatus, onSetGuestStatus, onSetAnreise, onSetInspected, 
+      onAddProblem, onUpdateMinibar, onAddPhoto, activeTab, setActiveTab,
+      getStatusColor, getStatusLabel, getGuestStatusLabel, getGuestStatusColor, getStaffName
+    }) {
+      const [problemModal, setProblemModal] = useState(false);
+      const [newProblem, setNewProblem] = useState({ type: '', description: '' });
+      
+      const minibarTotal = Object.entries(room.minibar || {}).reduce((sum, [_, item]) => sum + (item.consumed * item.price), 0);
+      const formatTime = (iso) => iso ? new Date(iso).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : '';
+      const isAdmin = currentUser.role === 'admin';
+
+      return (
+        <div className="min-h-screen bg-slate-50">
+          {/* Header */}
+          <div className={`${getStatusColor(room)} text-white px-5 pt-12 pb-6`}>
+            <div className="flex items-center gap-3 mb-4">
+              <button onClick={onBack} className="flex items-center gap-2 text-white/80">
+                <ArrowLeft className="w-5 h-5" /> Zurück
+              </button>
+              <TopEcoLogo size="small" />
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold">Zimmer {room.number}</h1>
+                <p className="text-white/80 mt-1">{room.floor}. Stock • {getStatusLabel(room)}</p>
+              </div>
+              {room.guestStatus !== 'none' && (
+                <span className="px-3 py-1 rounded-full text-sm font-medium bg-white/20">
+                  {getGuestStatusLabel(room.guestStatus)}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Guest Status - Admin Only */}
+          {isAdmin && (
+            <div className="px-4 py-3 bg-white border-b border-slate-100">
+              <p className="text-xs text-slate-500 mb-2">Gast Status</p>
+              <div className="grid grid-cols-5 gap-2">
+                {[
+                  { key: 'none', label: 'Keine', color: 'bg-slate-200 text-slate-700', ring: 'ring-slate-400' },
+                  { key: 'abreise', label: 'Abreise', color: 'bg-red-100 text-red-700', ring: 'ring-red-400' },
+                  { key: 'bleibe', label: 'Bleibe', color: 'bg-blue-100 text-blue-700', ring: 'ring-blue-400' },
+                  { key: 'bb', label: 'BB', color: 'bg-purple-100 text-purple-700', ring: 'ring-purple-400' },
+                  { key: 'kontrolle', label: 'Kontrolle', color: 'bg-orange-100 text-orange-700', ring: 'ring-orange-400' }
+                ].map(({ key, label, color, ring }) => (
+                  <button
+                    key={key}
+                    onClick={() => onSetGuestStatus(room.id, key)}
+                    className={`py-2 rounded-xl text-xs font-medium ${room.guestStatus === key ? `${color} ring-2 ${ring}` : 'bg-slate-100 text-slate-500'}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {room.guestStatus === 'abreise' && (
+                <div className="mt-3 flex items-center gap-3">
+                  <span className="text-xs text-slate-500">Anreise:</span>
+                  <button
+                    onClick={() => onSetAnreise(room.id, !room.anreise)}
+                    className={room.anreise ? "px-4 py-2 rounded-xl text-sm font-bold bg-green-500 text-white" : "px-4 py-2 rounded-xl text-sm font-bold bg-white text-slate-400 border-2 border-slate-200"}
+                  >
+                    {room.anreise ? 'AN ✓' : 'Leer'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Status Buttons */}
+          <div className="px-4 py-3 bg-white border-b border-slate-100">
+            <p className="text-xs text-slate-500 mb-2">Status</p>
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { status: 'pending', label: 'Warten', Icon: Clock },
+                { status: 'in_progress', label: 'In Arbeit', Icon: Clock },
+                { status: 'clean', label: 'Sauber', Icon: Check },
+                { status: 'skipped', label: 'Skip', Icon: SkipForward }
+              ].map(({ status, label, Icon }) => (
+                <button
+                  key={status}
+                  onClick={() => onSetStatus(room.id, status)}
+                  className={`py-3 rounded-xl text-xs font-medium ${
+                    room.status === status && !room.inspected ? 'bg-amber-100 text-amber-700 ring-2 ring-amber-400' : 'bg-slate-100 text-slate-500'
+                  }`}
+                >
+                  <Icon className="w-5 h-5 mx-auto mb-1" />
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Inspection Button - Admin */}
+          {isAdmin && room.status === 'clean' && (
+            <div className="px-4 py-3 bg-white border-b border-slate-100">
+              <button
+                onClick={() => onSetInspected(room.id, !room.inspected)}
+                className={`w-full py-4 rounded-xl font-semibold text-lg flex items-center justify-center gap-2 ${
+                  room.inspected ? 'bg-emerald-700 text-white' : 'bg-emerald-100 text-emerald-700 border-2 border-emerald-400'
+                }`}
+              >
+                <Eye className="w-6 h-6" />
+                {room.inspected ? '✓✓ Kontrolliert' : 'Als Kontrolliert markieren'}
+              </button>
+            </div>
+          )}
+
+          {/* Tabs */}
+          <div className="flex bg-white border-b border-slate-100">
+            {[
+              { key: 'status', label: 'Info', Icon: Check },
+              { key: 'problems', label: 'Probleme', Icon: AlertTriangle, badge: room.problems?.length || 0 },
+              { key: 'minibar', label: 'Minibar', Icon: Wine },
+              { key: 'photos', label: 'Fotos', Icon: Camera, badge: room.photos?.length || 0 }
+            ].map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-1 border-b-2 ${
+                  activeTab === tab.key ? 'border-sky-600 text-sky-600' : 'border-transparent text-slate-500'
+                }`}
+              >
+                <tab.Icon className="w-4 h-4" />
+                {tab.label}
+                {tab.badge > 0 && <span className="ml-1 px-1.5 py-0.5 bg-rose-500 text-white text-xs rounded-full">{tab.badge}</span>}
+              </button>
+            ))}
+          </div>
+
+          {/* Tab Content */}
+          <div className="p-4 pb-24">
+            {activeTab === 'status' && (
+              <div className="bg-white rounded-2xl p-5 shadow-sm">
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between py-2 border-b border-slate-100">
+                    <span className="text-slate-500">Zimmer</span>
+                    <span className="font-medium">{room.number}</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-slate-100">
+                    <span className="text-slate-500">Etage</span>
+                    <span className="font-medium">{room.floor}. Stock</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-slate-100">
+                    <span className="text-slate-500">Gast</span>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getGuestStatusColor(room.guestStatus) || 'bg-slate-100'}`}>
+                      {getGuestStatusLabel(room.guestStatus) || 'Keine'}
+                    </span>
+                  </div>
+                  {room.cleanedBy && (
+                    <div className="flex justify-between py-2 border-b border-slate-100">
+                      <span className="text-slate-500">Gereinigt von</span>
+                      <span className="font-medium">{getStaffName(room.cleanedBy)}</span>
+                    </div>
+                  )}
+                  {room.completedAt && (
+                    <div className="flex justify-between py-2">
+                      <span className="text-slate-500">Fertig um</span>
+                      <span className="font-medium text-emerald-600">{formatTime(room.completedAt)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'problems' && (
+              <div className="space-y-4">
+                <button onClick={() => setProblemModal(true)} className="w-full bg-rose-500 text-white py-3 rounded-xl font-medium flex items-center justify-center gap-2">
+                  <AlertTriangle className="w-5 h-5" /> Problem melden
+                </button>
+
+                {(!room.problems || room.problems.length === 0) ? (
+                  <div className="bg-white rounded-2xl p-8 text-center">
+                    <Check className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
+                    <p className="text-slate-500">Keine Probleme</p>
+                  </div>
+                ) : (
+                  room.problems.map(problem => (
+                    <div key={problem.id} className="bg-white rounded-xl p-4 shadow-sm flex gap-3">
+                      <span className="text-2xl">{problemTypes.find(p => p.id === problem.type)?.icon}</span>
+                      <div>
+                        <p className="font-medium">{problemTypes.find(p => p.id === problem.type)?.label}</p>
+                        <p className="text-sm text-slate-600">{problem.description}</p>
+                        <p className="text-xs text-slate-400 mt-1">{formatTime(problem.reportedAt)}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+
+                {problemModal && (
+                  <div className="fixed inset-0 bg-black/50 flex items-end z-50">
+                    <div className="bg-white w-full rounded-t-3xl p-5 pb-8">
+                      <div className="flex justify-between mb-5">
+                        <h3 className="text-lg font-semibold">Problem melden</h3>
+                        <button onClick={() => setProblemModal(false)}><X className="w-6 h-6 text-slate-400" /></button>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 mb-4">
+                        {problemTypes.map(type => (
+                          <button
+                            key={type.id}
+                            onClick={() => setNewProblem({ ...newProblem, type: type.id })}
+                            className={`py-3 rounded-xl text-center ${newProblem.type === type.id ? 'bg-rose-100 text-rose-700 ring-2 ring-rose-400' : 'bg-slate-100'}`}
+                          >
+                            <span className="text-xl block mb-1">{type.icon}</span>
+                            <span className="text-xs">{type.label}</span>
+                          </button>
+                        ))}
+                      </div>
+
+                      <textarea
+                        value={newProblem.description}
+                        onChange={(e) => setNewProblem({ ...newProblem, description: e.target.value })}
+                        placeholder="Beschreibung..."
+                        className="w-full h-20 p-3 bg-slate-100 rounded-xl resize-none"
+                      />
+
+                      <button
+                        onClick={() => {
+                          if (newProblem.type && newProblem.description) {
+                            onAddProblem(room.id, newProblem.type, newProblem.description);
+                            setNewProblem({ type: '', description: '' });
+                            setProblemModal(false);
+                          }
+                        }}
+                        disabled={!newProblem.type || !newProblem.description}
+                        className="w-full mt-4 bg-rose-500 text-white py-3 rounded-xl font-medium disabled:opacity-50"
+                      >
+                        Speichern
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'minibar' && (
+              <div className="space-y-4">
+                <div className="bg-purple-600 text-white rounded-2xl p-5">
+                  <p className="text-purple-200 text-sm">Gesamt</p>
+                  <p className="text-3xl font-bold">{minibarTotal} €</p>
+                </div>
+
+                <div className="bg-white rounded-2xl divide-y divide-slate-100 shadow-sm">
+                  {Object.entries(room.minibar || {}).map(([key, item]) => (
+                    <div key={key} className="p-4 flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">
+                          {key === 'water' ? 'Wasser' : key === 'cola' ? 'Cola' : key === 'beer' ? 'Bier' : 
+                           key === 'wine' ? 'Wein' : key === 'snacks' ? 'Snacks' : key === 'juice' ? 'Saft' : key}
+                        </p>
+                        <p className="text-sm text-slate-500">{item.price} €</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => onUpdateMinibar(room.id, key, -1)} className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center">
+                          <Minus className="w-4 h-4" />
+                        </button>
+                        <span className="w-8 text-center font-semibold text-lg">{item.consumed}</span>
+                        <button onClick={() => onUpdateMinibar(room.id, key, 1)} className="w-9 h-9 rounded-full bg-sky-100 flex items-center justify-center">
+                          <Plus className="w-4 h-4 text-sky-600" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'photos' && (
+              <div className="space-y-4">
+                <label className="w-full bg-sky-500 text-white py-3 rounded-xl font-medium flex items-center justify-center gap-2 cursor-pointer">
+                  <Camera className="w-5 h-5" /> Foto aufnehmen
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    capture="environment"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => onAddPhoto(room.id, reader.result);
+                        reader.readAsDataURL(file);
+                      }
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+
+                {(!room.photos || room.photos.length === 0) ? (
+                  <div className="bg-white rounded-2xl p-8 text-center">
+                    <Camera className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                    <p className="text-slate-500">Keine Fotos</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {room.photos.map(photo => (
+                      <div key={photo.id} className="relative aspect-[4/3] rounded-xl overflow-hidden">
+                        <img src={photo.url} alt="" className="w-full h-full object-cover" />
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/50 p-2">
+                          <span className="text-white text-xs">{formatTime(photo.takenAt)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Complete Button - Housekeeping */}
+          {!isAdmin && room.status !== 'clean' && (
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-100">
+              <button
+                onClick={() => onSetStatus(room.id, 'clean')}
+                className="w-full bg-amber-400 text-slate-800 py-4 rounded-xl font-semibold text-lg flex items-center justify-center gap-2 shadow-lg"
+              >
+                <Check className="w-6 h-6" /> Sauber ✓
+              </button>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
